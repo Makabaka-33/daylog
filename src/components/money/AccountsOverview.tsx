@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createAccount, deleteAccount, updateAccountBalance } from "@/actions/money";
 import { accountTypeLabels } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -22,15 +23,15 @@ interface Props {
   totalBalance: number;
 }
 
-export function AccountsOverview({ accounts: initialAccounts, totalBalance }: Props) {
-  const [accounts, setAccounts] = useState(initialAccounts);
+export function AccountsOverview({ accounts, totalBalance }: Props) {
+  const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBalance, setEditBalance] = useState("");
 
   async function handleDelete(id: string) {
-    setAccounts((prev) => prev.filter((a) => a.id !== id));
     await deleteAccount(id);
+    router.refresh();
   }
 
   function startEdit(account: Account) {
@@ -41,11 +42,15 @@ export function AccountsOverview({ accounts: initialAccounts, totalBalance }: Pr
   async function handleSaveBalance(accountId: string) {
     const balance = parseFloat(editBalance);
     if (isNaN(balance)) return;
-    setAccounts((prev) =>
-      prev.map((a) => (a.id === accountId ? { ...a, balance } : a))
-    );
     setEditingId(null);
     await updateAccountBalance(accountId, balance);
+    router.refresh();
+  }
+
+  async function handleAdd(formData: FormData) {
+    await createAccount(formData);
+    router.refresh();
+    setShowAdd(false);
   }
 
   return (
@@ -127,10 +132,7 @@ export function AccountsOverview({ accounts: initialAccounts, totalBalance }: Pr
       <AddAccountModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
-        onCreated={(account) => {
-          setAccounts((prev) => [...prev, account]);
-          setShowAdd(false);
-        }}
+        onAdd={handleAdd}
       />
     </div>
   );
@@ -139,11 +141,11 @@ export function AccountsOverview({ accounts: initialAccounts, totalBalance }: Pr
 function AddAccountModal({
   open,
   onClose,
-  onCreated,
+  onAdd,
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (account: Account) => void;
+  onAdd: (formData: FormData) => void;
 }) {
   const [name, setName] = useState("");
   const [accountType, setAccountType] = useState("bank");
@@ -159,14 +161,8 @@ function AddAccountModal({
     formData.set("name", name);
     formData.set("accountType", accountType);
     formData.set("balance", balance);
-    await createAccount(formData);
+    await onAdd(formData);
 
-    onCreated({
-      id: crypto.randomUUID(),
-      name,
-      accountType,
-      balance: parseFloat(balance),
-    });
     setLoading(false);
     setName("");
     setBalance("");

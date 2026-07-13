@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createExpense } from "@/actions/expenses";
 import { expenseCategories } from "@/lib/constants";
 import { today } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Plus } from "lucide-react";
 
 export function AddExpenseForm() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("lunch");
@@ -32,6 +34,7 @@ export function AddExpenseForm() {
     setNote("");
     setLoading(false);
     setOpen(false);
+    router.refresh();
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic } from "react";
+import { useRouter } from "next/navigation";
 import { TaskItem } from "./TaskItem";
 import { AddTaskForm } from "./AddTaskForm";
 import { DateRangeSelector } from "./DateRangeSelector";
@@ -12,11 +13,20 @@ interface Props {
   tasks: Task[];
 }
 
-export function NearTermTaskSection({ tasks: initialTasks }: Props) {
-  const [taskList, setTaskList] = useState(initialTasks);
+export function NearTermTaskSection({ tasks }: Props) {
+  const router = useRouter();
   const [range, setRange] = useState("1w");
+  const [optimisticTasks, setOptimistic] = useOptimistic(
+    tasks,
+    (state, toggledId: string) =>
+      state.map((t) =>
+        t.id === toggledId
+          ? { ...t, status: t.status === "completed" ? "pending" as const : "completed" as const }
+          : t
+      )
+  );
 
-  const filteredTasks = taskList.filter((t) => {
+  const filteredTasks = optimisticTasks.filter((t) => {
     if (!t.dueDate) return true;
     const now = new Date();
     const due = new Date(t.dueDate);
@@ -32,24 +42,18 @@ export function NearTermTaskSection({ tasks: initialTasks }: Props) {
   });
 
   async function handleToggle(taskId: string) {
-    setTaskList((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? { ...t, status: t.status === "completed" ? "pending" : "completed" as const }
-          : t
-      )
-    );
+    setOptimistic(taskId);
     await toggleTaskComplete(taskId);
   }
 
   async function handleDelete(taskId: string) {
-    setTaskList((prev) => prev.filter((t) => t.id !== taskId));
     await deleteTask(taskId);
+    router.refresh();
   }
 
   async function handleConvert(taskId: string) {
-    setTaskList((prev) => prev.filter((t) => t.id !== taskId));
     await convertToDaily(taskId);
+    router.refresh();
   }
 
   return (

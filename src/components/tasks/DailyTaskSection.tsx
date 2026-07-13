@@ -1,6 +1,7 @@
 "use client";
 
-import { useOptimistic, useState } from "react";
+import { useOptimistic } from "react";
+import { useRouter } from "next/navigation";
 import { TaskItem } from "./TaskItem";
 import { AddTaskForm } from "./AddTaskForm";
 import { toggleTaskComplete, deleteTask, reorderTasks } from "@/actions/tasks";
@@ -23,14 +24,14 @@ interface Props {
   tasks: Task[];
 }
 
-export function DailyTaskSection({ tasks: initialTasks }: Props) {
-  const [taskList, setTaskList] = useState(initialTasks);
+export function DailyTaskSection({ tasks }: Props) {
+  const router = useRouter();
   const [optimisticTasks, setOptimistic] = useOptimistic(
-    taskList,
+    tasks,
     (state, toggledId: string) =>
       state.map((t) =>
         t.id === toggledId
-          ? { ...t, status: t.status === "completed" ? "pending" : "completed" as const }
+          ? { ...t, status: t.status === "completed" ? "pending" as const : "completed" as const }
           : t
       )
   );
@@ -42,37 +43,33 @@ export function DailyTaskSection({ tasks: initialTasks }: Props) {
   async function handleToggle(taskId: string) {
     setOptimistic(taskId);
     await toggleTaskComplete(taskId);
-    setTaskList((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? {
-              ...t,
-              status:
-                t.status === "completed"
-                  ? ("pending" as const)
-                  : ("completed" as const),
-            }
-          : t
-      )
-    );
   }
 
   async function handleDelete(taskId: string) {
-    setTaskList((prev) => prev.filter((t) => t.id !== taskId));
+    const toggled = optimisticTasks.find((t) => t.id === taskId);
+    if (toggled) {
+      setOptimistic(taskId); // optimistically toggle to trigger re-render, then refresh
+    }
     await deleteTask(taskId);
+    router.refresh();
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = taskList.findIndex((t) => t.id === active.id);
-    const newIndex = taskList.findIndex((t) => t.id === over.id);
+    const pending = optimisticTasks.filter((t) => t.status === "pending");
+    const oldIndex = pending.findIndex((t) => t.id === active.id);
+    const newIndex = pending.findIndex((t) => t.id === over.id);
 
-    const reordered = arrayMove(taskList, oldIndex, newIndex);
-    setTaskList(reordered);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(pending, oldIndex, newIndex);
     await reorderTasks(reordered.map((t) => t.id));
+    router.refresh();
   }
+
+  const pendingTasks = optimisticTasks.filter((t) => t.status === "pending");
 
   return (
     <div className="space-y-3">
@@ -86,20 +83,18 @@ export function DailyTaskSection({ tasks: initialTasks }: Props) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={optimisticTasks.filter((t) => t.status === "pending").map((t) => t.id)}
+          items={pendingTasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-1">
-            {optimisticTasks
-              .filter((t) => t.status === "pending")
-              .map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggle={handleToggle}
-                  onDelete={handleDelete}
-                />
-              ))}
+            {pendingTasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         </SortableContext>
       </DndContext>

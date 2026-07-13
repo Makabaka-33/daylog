@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { upsertProfile } from "@/actions/resume";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function WhatIWantSection({ profile }: Props) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [desiredJob, setDesiredJob] = useState(profile?.desiredJob || "");
   const [desiredIndustry, setDesiredIndustry] = useState(profile?.desiredIndustry || "");
@@ -41,6 +43,7 @@ export function WhatIWantSection({ profile }: Props) {
 
     setLoading(false);
     setEditing(false);
+    router.refresh();
   }
 
   if (!editing && !profile?.desiredJob) {

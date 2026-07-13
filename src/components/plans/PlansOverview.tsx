@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -29,8 +30,8 @@ const periodLabels: Record<string, string> = {
   year: "年",
 };
 
-export function PlansOverview({ plans: initialPlans }: Props) {
-  const [plans, setPlans] = useState(initialPlans);
+export function PlansOverview({ plans }: Props) {
+  const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
 
   return (
@@ -74,9 +75,9 @@ export function PlansOverview({ plans: initialPlans }: Props) {
       <AddPlanModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
-        onCreated={(plan) => {
-          setPlans((prev) => [...prev, plan]);
+        onCreated={() => {
           setShowAdd(false);
+          router.refresh();
         }}
       />
     </div>
@@ -90,7 +91,7 @@ function AddPlanModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (plan: Plan) => void;
+  onCreated: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -112,15 +113,8 @@ function AddPlanModal({
     formData.set("endDate", endDate);
     await createPlan(formData);
 
-    onCreated({
-      id: crypto.randomUUID(),
-      title,
-      description: description || null,
-      period,
-      startDate,
-      endDate,
-    });
     setLoading(false);
+    onCreated();
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -45,6 +46,7 @@ interface Props {
 }
 
 export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards }: Props) {
+  const router = useRouter();
   const [columns, setColumns] = useState(initialColumns);
   const [cards, setCards] = useState(initialCards);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
@@ -68,7 +70,6 @@ export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
 
-    // Determine target column
     const overCard = cards.find((c) => c.id === over.id);
     const overColumn = columns.find((c) => c.id === over.id);
 
@@ -86,6 +87,7 @@ export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards
     setCards((prev) =>
       prev.map((c) => (c.id === cardId ? { ...c, columnId: targetColumnId } : c))
     );
+    router.refresh();
   }
 
   async function handleAddColumn() {
@@ -94,6 +96,7 @@ export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards
     setColumns((prev) => [...prev, { id, planId: plan.id, title: newColTitle.trim(), sortOrder: prev.length }]);
     await createColumn(plan.id, newColTitle.trim());
     setNewColTitle("");
+    router.refresh();
   }
 
   async function handleAddCard(columnId: string, title: string) {
@@ -103,6 +106,7 @@ export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards
       { id, columnId, title, description: null, sortOrder: prev.length, completed: false, color: null },
     ]);
     await createCard(columnId, title);
+    router.refresh();
   }
 
   async function handleToggleCard(cardId: string) {
@@ -115,12 +119,14 @@ export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards
   async function handleDeleteCard(cardId: string) {
     setCards((prev) => prev.filter((c) => c.id !== cardId));
     await deleteCard(cardId);
+    router.refresh();
   }
 
   async function handleDeleteColumn(columnId: string) {
     setColumns((prev) => prev.filter((c) => c.id !== columnId));
     setCards((prev) => prev.filter((c) => c.columnId !== columnId));
     await removeColumn(columnId);
+    router.refresh();
   }
 
   return (
@@ -144,7 +150,6 @@ export function KanbanBoard({ plan, columns: initialColumns, cards: initialCards
             />
           ))}
 
-          {/* Add column */}
           <div className="flex-shrink-0 w-64">
             <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 p-3">
               <input

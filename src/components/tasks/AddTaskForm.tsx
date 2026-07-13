@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createTask } from "@/actions/tasks";
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function AddTaskForm({ taskType }: Props) {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +26,7 @@ export function AddTaskForm({ taskType }: Props) {
     await createTask(formData);
     setTitle("");
     setLoading(false);
+    router.refresh();
     inputRef.current?.focus();
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Tabs } from "@/components/ui/Tabs";
 import { createPackage, deletePackage, updatePackageStatus } from "@/actions/packages";
 import { packageStatusLabels } from "@/lib/constants";
@@ -29,8 +30,8 @@ const tabs = [
   { value: "send", label: "待寄" },
 ];
 
-export function PackageTabs({ packages: initialPackages }: Props) {
-  const [packages, setPackages] = useState(initialPackages);
+export function PackageTabs({ packages }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
 
@@ -40,15 +41,13 @@ export function PackageTabs({ packages: initialPackages }: Props) {
       : packages.filter((p) => p.direction === tab);
 
   async function handleDelete(id: string) {
-    setPackages((prev) => prev.filter((p) => p.id !== id));
     await deletePackage(id);
+    router.refresh();
   }
 
   async function handleStatusChange(packageId: string, newStatus: string) {
-    setPackages((prev) =>
-      prev.map((p) => (p.id === packageId ? { ...p, status: newStatus } : p))
-    );
     await updatePackageStatus(packageId, newStatus);
+    router.refresh();
   }
 
   return (
@@ -117,9 +116,9 @@ export function PackageTabs({ packages: initialPackages }: Props) {
       <AddPackageModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
-        onCreated={(pkg) => {
-          setPackages((prev) => [...prev, pkg]);
+        onCreated={() => {
           setShowAdd(false);
+          router.refresh();
         }}
       />
     </div>
@@ -133,7 +132,7 @@ function AddPackageModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (pkg: Pkg) => void;
+  onCreated: () => void;
 }) {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [carrier, setCarrier] = useState("");
@@ -155,16 +154,8 @@ function AddPackageModal({
     formData.set("estimatedDelivery", estimatedDelivery);
     await createPackage(formData);
 
-    onCreated({
-      id: crypto.randomUUID(),
-      trackingNumber,
-      carrier: carrier || null,
-      direction,
-      description: description || null,
-      status: "pending",
-      estimatedDelivery: estimatedDelivery || null,
-    });
     setLoading(false);
+    onCreated();
   }
 
   return (

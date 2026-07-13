@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic } from "react";
+import { useRouter } from "next/navigation";
 import { toggleTaskComplete, deleteTask } from "@/actions/tasks";
 import { Check, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import type { Task } from "./types";
@@ -9,26 +10,29 @@ interface Props {
   tasks: Task[];
 }
 
-export function CompletedTaskSection({ tasks: initialTasks }: Props) {
+export function CompletedTaskSection({ tasks }: Props) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  const [taskList, setTaskList] = useState(initialTasks);
-
-  if (taskList.length === 0) return null;
-
-  async function handleToggle(taskId: string) {
-    setTaskList((prev) =>
-      prev.map((t) =>
-        t.id === taskId
+  const [optimisticTasks, setOptimistic] = useOptimistic(
+    tasks,
+    (state, toggledId: string) =>
+      state.map((t) =>
+        t.id === toggledId
           ? { ...t, status: "pending" as const }
           : t
       )
-    );
+  );
+
+  if (optimisticTasks.length === 0) return null;
+
+  async function handleToggle(taskId: string) {
+    setOptimistic(taskId);
     await toggleTaskComplete(taskId);
   }
 
   async function handleDelete(taskId: string) {
-    setTaskList((prev) => prev.filter((t) => t.id !== taskId));
     await deleteTask(taskId);
+    router.refresh();
   }
 
   return (
@@ -38,12 +42,12 @@ export function CompletedTaskSection({ tasks: initialTasks }: Props) {
         className="flex items-center gap-1.5 text-sm font-medium text-gray-400 uppercase tracking-wide hover:text-gray-600"
       >
         {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        今日完成 ({taskList.length})
+        今日完成 ({optimisticTasks.length})
       </button>
 
       {expanded && (
         <div className="space-y-1">
-          {taskList.map((task) => (
+          {optimisticTasks.map((task) => (
             <div
               key={task.id}
               className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400"

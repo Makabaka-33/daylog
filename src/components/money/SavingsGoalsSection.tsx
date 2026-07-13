@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createGoal, deleteGoal } from "@/actions/money";
 import { formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/Card";
@@ -22,13 +23,13 @@ interface Props {
   goals: Goal[];
 }
 
-export function SavingsGoalsSection({ goals: initialGoals }: Props) {
-  const [goals, setGoals] = useState(initialGoals);
+export function SavingsGoalsSection({ goals }: Props) {
+  const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
 
   async function handleDelete(id: string) {
-    setGoals((prev) => prev.filter((g) => g.id !== id));
     await deleteGoal(id);
+    router.refresh();
   }
 
   return (
@@ -86,9 +87,9 @@ export function SavingsGoalsSection({ goals: initialGoals }: Props) {
       <AddGoalModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
-        onCreated={(goal) => {
-          setGoals((prev) => [...prev, goal]);
+        onCreated={() => {
           setShowAdd(false);
+          router.refresh();
         }}
       />
     </div>
@@ -102,7 +103,7 @@ function AddGoalModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (goal: Goal) => void;
+  onCreated: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
@@ -122,18 +123,12 @@ function AddGoalModal({
     formData.set("deadline", deadline);
     await createGoal(formData);
 
-    onCreated({
-      id: crypto.randomUUID(),
-      title,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: parseFloat(currentAmount || "0"),
-      deadline: deadline || null,
-    });
     setLoading(false);
     setTitle("");
     setTargetAmount("");
     setCurrentAmount("");
     setDeadline("");
+    onCreated();
   }
 
   return (

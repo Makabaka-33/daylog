@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { deleteExpense } from "@/actions/expenses";
 import { expenseCategories } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -20,12 +20,12 @@ interface Props {
   expenses: Expense[];
 }
 
-export function ExpenseList({ expenses: initialExpenses }: Props) {
-  const [expenses, setExpenses] = useState(initialExpenses);
+export function ExpenseList({ expenses }: Props) {
+  const router = useRouter();
 
   async function handleDelete(id: string) {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
     await deleteExpense(id);
+    router.refresh();
   }
 
   if (expenses.length === 0) {

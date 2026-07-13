@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createResumeItem, deleteResumeItem } from "@/actions/resume";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -27,13 +28,13 @@ const categoryLabels: Record<string, string> = {
   language: "语言",
 };
 
-export function WhatIHaveSection({ items: initialItems }: Props) {
-  const [items, setItems] = useState(initialItems);
+export function WhatIHaveSection({ items }: Props) {
+  const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
 
   async function handleDelete(id: string) {
-    setItems((prev) => prev.filter((i) => i.id !== id));
     await deleteResumeItem(id);
+    router.refresh();
   }
 
   const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
@@ -103,9 +104,9 @@ export function WhatIHaveSection({ items: initialItems }: Props) {
       <AddItemModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
-        onCreated={(item) => {
-          setItems((prev) => [...prev, item]);
+        onCreated={() => {
           setShowAdd(false);
+          router.refresh();
         }}
       />
     </div>
@@ -119,7 +120,7 @@ function AddItemModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (item: Item) => void;
+  onCreated: () => void;
 }) {
   const [category, setCategory] = useState("skill");
   const [title, setTitle] = useState("");
@@ -139,14 +140,8 @@ function AddItemModal({
     formData.set("level", level);
     await createResumeItem(formData);
 
-    onCreated({
-      id: crypto.randomUUID(),
-      category,
-      title,
-      description: description || null,
-      level: level || null,
-    });
     setLoading(false);
+    onCreated();
   }
 
   return (
